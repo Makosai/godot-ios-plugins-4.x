@@ -93,7 +93,7 @@ private:
 	GodotUInt8Vector img_data[2];
 
 #if VERSION_MAJOR == 4
-  XRInterface::TrackingStatus tracking_state;
+	XRInterface::TrackingStatus tracking_state;
 #endif
 
 	struct anchor_map {
@@ -135,27 +135,27 @@ public:
 	virtual bool is_initialized() const GODOT_ARKIT_OVERRIDE;
 	virtual bool initialize() GODOT_ARKIT_OVERRIDE;
 	virtual void uninitialize() GODOT_ARKIT_OVERRIDE;
-  virtual Dictionary get_system_info() GODOT_ARKIT_OVERRIDE;
+	virtual Dictionary get_system_info() GODOT_ARKIT_OVERRIDE;
+
+	/** input and output **/
+ 	virtual TrackingStatus get_tracking_status() const GODOT_ARKIT_OVERRIDE { return tracking_state; };
+	
+	/** specific to AR **/
+	virtual bool get_anchor_detection_is_enabled() const GODOT_ARKIT_OVERRIDE;
+	virtual void set_anchor_detection_is_enabled(bool p_enable) GODOT_ARKIT_OVERRIDE;
+	virtual int get_camera_feed_id() GODOT_ARKIT_OVERRIDE;
+
+	/** rendering and internal **/
+
+	virtual Transform3D get_camera_transform() GODOT_ARKIT_OVERRIDE;
+	virtual void process() GODOT_ARKIT_OVERRIDE;
 
 	virtual Size2 get_render_target_size() GODOT_ARKIT_OVERRIDE;
 	virtual uint32_t get_view_count() GODOT_ARKIT_OVERRIDE;
-  virtual Transform3D get_camera_transform() GODOT_ARKIT_OVERRIDE;
 	virtual Transform3D get_transform_for_view(uint32_t p_view, const Transform3D &p_cam_transform) GODOT_ARKIT_OVERRIDE;
 	virtual Projection get_projection_for_view(uint32_t p_view, double p_aspect, double p_z_near, double p_z_far) GODOT_ARKIT_OVERRIDE;
-
-	virtual void process() GODOT_ARKIT_OVERRIDE;
-  virtual void pre_render(){} GODOT_ARKIT_OVERRIDE;
-	virtual bool pre_draw_viewport(RID p_render_target) GODOT_ARKIT_OVERRIDE;
+	
 	virtual Vector<BlitToScreen> post_draw_viewport(RID p_render_target, const Rect2 &p_screen_rect) GODOT_ARKIT_OVERRIDE;
-	virtual void end_frame() GODOT_ARKIT_OVERRIDE;
-
-  virtual bool is_passthrough_supported() GODOT_ARKIT_OVERRIDE;
-	virtual bool is_passthrough_enabled() GODOT_ARKIT_OVERRIDE;
-	virtual bool start_passthrough() GODOT_ARKIT_OVERRIDE;
-	virtual void stop_passthrough() GODOT_ARKIT_OVERRIDE;
-
-	virtual Array get_supported_environment_blend_modes() GODOT_ARKIT_OVERRIDE;
-	virtual bool set_environment_blend_mode(EnvironmentBlendMode mode) GODOT_ARKIT_OVERRIDE;
 
 	// called by delegate (void * because C++ and Obj-C don't always mix, should really change all platform/ios/*.cpp files to .mm)
 	void _add_or_update_anchor(GodotARAnchor *p_anchor);

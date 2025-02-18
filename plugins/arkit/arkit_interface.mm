@@ -349,6 +349,11 @@ void ARKitInterface::uninitialize() {
 	}
 }
 
+Dictionary ARKitInterface::get_system_info() {
+	Dictionary dict;
+	return dict;
+}
+
 Size2 ARKitInterface::get_render_target_size() {
 	GODOT_MAKE_THREAD_SAFE
 
@@ -359,6 +364,14 @@ Size2 ARKitInterface::get_render_target_size() {
 #endif
 
 	return target_size;
+}
+
+uint32_t ARKitInterface::get_view_count() {
+	return 1;
+}
+
+Transform3D ARKitInterface::get_camera_transform() {
+	return Transform3D();
 }
 
 Transform3D ARKitInterface::get_transform_for_view(uint32_t p_view, const Transform3D &p_cam_transform) {
@@ -396,6 +409,11 @@ Projection ARKitInterface::get_projection_for_view(uint32_t p_view, double p_asp
 	z_far = p_z_far;
 
 	return projection;
+}
+
+Vector<BlitToScreen> ARKitInterface::post_draw_viewport(RID p_render_target, const Rect2 &p_screen_rect) {
+	Vector<BlitToScreen> blit_to_screen;
+	return blit_to_screen;
 }
 
 GodotARTracker *ARKitInterface::get_anchor_for_uuid(const unsigned char *p_uuid) {
@@ -646,7 +664,11 @@ void ARKitInterface::process() {
 						}
 
 						// set our texture...
+#if VERSION_MAJOR == 4 && VERSION_MINOR >= 4
+						feed->set_ycbcr_images(img[0], img[1]);
+#else
 						feed->set_YCbCr_imgs(img[0], img[1]);
+#endif
 
 						// now build our transform to display this as a background image that matches our camera
 						CGAffineTransform affine_transform = [current_frame displayTransformForOrientation:orientation viewportSize:CGSizeMake(screen_size.width, screen_size.height)];
