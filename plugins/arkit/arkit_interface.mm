@@ -371,7 +371,7 @@ uint32_t ARKitInterface::get_view_count() {
 }
 
 Transform3D ARKitInterface::get_camera_transform() {
-	return Transform3D();
+	return transform;
 }
 
 Transform3D ARKitInterface::get_transform_for_view(uint32_t p_view, const Transform3D &p_cam_transform) {
@@ -421,7 +421,7 @@ Vector<BlitToScreen> ARKitInterface::post_draw_viewport(RID p_render_target, con
 
 	// Because we are rendering to our device we must use our main viewport!
 	ERR_FAIL_COND_V(p_screen_rect == Rect2(), blit_to_screen);
-	
+
 	Rect2 src_rect(0.0f, 0.0f, 1.0f, 1.0f);
 	Rect2 dst_rect = p_screen_rect;
 	//Vector2 eye_center(((-intraocular_dist / 2.0) + (display_width / 4.0)) / (display_width / 2.0), 0.0);
@@ -647,11 +647,11 @@ void ARKitInterface::process() {
 							}
 
 #if VERSION_MAJOR == 4
-              img[0].instantiate();
-              img[0]->initialize_data(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
+              				img[0].instantiate();
+        					img[0]->initialize_data(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
 #else
-              img[0].instance();
-              img[0]->create(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
+            				img[0].instance();
+            				img[0]->create(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
 #endif
 						}
 
@@ -696,11 +696,11 @@ void ARKitInterface::process() {
 							}
 
 #if VERSION_MAJOR == 4
-              img[1].instantiate();
-              img[1]->initialize_data(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
+            				img[1].instantiate();
+            				img[1]->initialize_data(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
 #else
-              img[1].instance();
-              img[1]->create(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
+            				img[1].instance();
+            				img[1]->create(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
 #endif
 						}
 
@@ -713,20 +713,7 @@ void ARKitInterface::process() {
 
 						// now build our transform to display this as a background image that matches our camera
 						CGAffineTransform affine_transform = [current_frame displayTransformForOrientation:orientation viewportSize:CGSizeMake(screen_size.width, screen_size.height)];
-
-						// we need to invert this, probably row v.s. column notation
-						affine_transform = CGAffineTransformInvert(affine_transform);
-
-						if (orientation != UIInterfaceOrientationPortrait) {
-							affine_transform.b = -affine_transform.b;
-							affine_transform.d = -affine_transform.d;
-							affine_transform.ty = 1.0 - affine_transform.ty;
-						} else {
-							affine_transform.c = -affine_transform.c;
-							affine_transform.a = -affine_transform.a;
-							affine_transform.tx = 1.0 - affine_transform.tx;
-						}
-
+						
 						Transform2D display_transform = Transform2D(
 								affine_transform.a, affine_transform.b,
 								affine_transform.c, affine_transform.d,
@@ -769,12 +756,12 @@ void ARKitInterface::process() {
 					// copy our current frame transform
 					matrix_float4x4 m44 = camera.transform;
 					if (orientation == UIInterfaceOrientationLandscapeLeft) {
-						transform.basis.rows[0].x = m44.columns[0][0];
-						transform.basis.rows[1].x = m44.columns[0][1];
-						transform.basis.rows[2].x = m44.columns[0][2];
-						transform.basis.rows[0].y = m44.columns[1][0];
-						transform.basis.rows[1].y = m44.columns[1][1];
-						transform.basis.rows[2].y = m44.columns[1][2];
+						transform.basis.rows[0].x = -m44.columns[0][0];
+						transform.basis.rows[1].x = -m44.columns[0][1];
+						transform.basis.rows[2].x = -m44.columns[0][2];
+						transform.basis.rows[0].y = -m44.columns[1][0];
+						transform.basis.rows[1].y = -m44.columns[1][1];
+						transform.basis.rows[2].y = -m44.columns[1][2];
 					} else if (orientation == UIInterfaceOrientationPortrait) {
 						transform.basis.rows[0].x = m44.columns[1][0];
 						transform.basis.rows[1].x = m44.columns[1][1];
@@ -783,21 +770,21 @@ void ARKitInterface::process() {
 						transform.basis.rows[1].y = -m44.columns[0][1];
 						transform.basis.rows[2].y = -m44.columns[0][2];
 					} else if (orientation == UIInterfaceOrientationLandscapeRight) {
-						transform.basis.rows[0].x = -m44.columns[0][0];
-						transform.basis.rows[1].x = -m44.columns[0][1];
-						transform.basis.rows[2].x = -m44.columns[0][2];
-						transform.basis.rows[0].y = -m44.columns[1][0];
-						transform.basis.rows[1].y = -m44.columns[1][1];
-						transform.basis.rows[2].y = -m44.columns[1][2];
+						transform.basis.rows[0].x = m44.columns[0][0];
+						transform.basis.rows[1].x = m44.columns[0][1];
+						transform.basis.rows[2].x = m44.columns[0][2];
+						transform.basis.rows[0].y = m44.columns[1][0];
+						transform.basis.rows[1].y = m44.columns[1][1];
+						transform.basis.rows[2].y = m44.columns[1][2];
 					} else if (orientation == UIInterfaceOrientationPortraitUpsideDown) {
-						// this may not be correct
-						transform.basis.rows[0].x = m44.columns[1][0];
-						transform.basis.rows[1].x = m44.columns[1][1];
-						transform.basis.rows[2].x = m44.columns[1][2];
+						transform.basis.rows[0].x = -m44.columns[1][0];
+						transform.basis.rows[1].x = -m44.columns[1][1];
+						transform.basis.rows[2].x = -m44.columns[1][2];
 						transform.basis.rows[0].y = m44.columns[0][0];
 						transform.basis.rows[1].y = m44.columns[0][1];
 						transform.basis.rows[2].y = m44.columns[0][2];
 					}
+					
 					transform.basis.rows[0].z = m44.columns[2][0];
 					transform.basis.rows[1].z = m44.columns[2][1];
 					transform.basis.rows[2].z = m44.columns[2][2];
@@ -807,6 +794,7 @@ void ARKitInterface::process() {
 
 					// copy our current frame projection, investigate using projectionMatrixWithViewportSize:orientation:zNear:zFar: so we can set our own near and far
 					m44 = [camera projectionMatrixForOrientation:orientation viewportSize:CGSizeMake(screen_size.width, screen_size.height) zNear:z_near zFar:z_far];
+
 					projection.columns[0][0] = m44.columns[0][0];
 					projection.columns[1][0] = m44.columns[1][0];
 					projection.columns[2][0] = m44.columns[2][0];
