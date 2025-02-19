@@ -115,11 +115,7 @@ protected:
 public:
 	void start_session();
 	void stop_session();
-
-	bool get_anchor_detection_is_enabled() const GODOT_ARKIT_OVERRIDE;
-	void set_anchor_detection_is_enabled(bool p_enable) GODOT_ARKIT_OVERRIDE;
-	virtual int get_camera_feed_id() GODOT_ARKIT_OVERRIDE;
-
+	
 	bool get_light_estimation_is_enabled() const;
 	void set_light_estimation_is_enabled(bool p_enable);
 

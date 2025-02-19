@@ -412,9 +412,50 @@ Projection ARKitInterface::get_projection_for_view(uint32_t p_view, double p_asp
 }
 
 Vector<BlitToScreen> ARKitInterface::post_draw_viewport(RID p_render_target, const Rect2 &p_screen_rect) {
+	GODOT_MAKE_THREAD_SAFE
+
 	Vector<BlitToScreen> blit_to_screen;
+
+	// We must have a valid render target
+	ERR_FAIL_COND_V(!p_render_target.is_valid(), blit_to_screen);
+
+	// Because we are rendering to our device we must use our main viewport!
+	ERR_FAIL_COND_V(p_screen_rect == Rect2(), blit_to_screen);
+	
+	Rect2 src_rect(0.0f, 0.0f, 1.0f, 1.0f);
+	Rect2 dst_rect = p_screen_rect;
+	//Vector2 eye_center(((-intraocular_dist / 2.0) + (display_width / 4.0)) / (display_width / 2.0), 0.0);
+
+	//add_blit(p_render_target, src_rect, dst_rect);
+	
+	if (p_screen_rect != Rect2()) {
+		BlitToScreen blit;
+
+		blit.render_target = p_render_target;
+		blit.multi_view.use_layer = true;
+		blit.multi_view.layer = 0;
+		blit.lens_distortion.apply = false;
+
+		Size2 render_size = get_render_target_size();
+		Rect2 dst_rect = p_screen_rect;
+		float new_height = dst_rect.size.x * (render_size.y / render_size.x);
+		if (new_height > dst_rect.size.y) {
+			dst_rect.position.y = (0.5 * dst_rect.size.y) - (0.5 * new_height);
+			dst_rect.size.y = new_height;
+		} else {
+			float new_width = dst_rect.size.y * (render_size.x / render_size.y);
+
+			dst_rect.position.x = (0.5 * dst_rect.size.x) - (0.5 * new_width);
+			dst_rect.size.x = new_width;
+		}
+
+		blit.dst_rect = dst_rect;
+		blit_to_screen.push_back(blit);
+	}
+	
 	return blit_to_screen;
 }
+
 
 GodotARTracker *ARKitInterface::get_anchor_for_uuid(const unsigned char *p_uuid) {
 	if (anchors == NULL) {
