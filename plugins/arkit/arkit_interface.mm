@@ -94,12 +94,14 @@ void ARKitInterface::start_session() {
 
 			configuration.lightEstimationEnabled = light_estimation_is_enabled;
 			if (plane_detection_is_enabled) {
+				print_line("Starting plane detection");
 				if (@available(iOS 11.3, *)) {
 					configuration.planeDetection = ARPlaneDetectionVertical | ARPlaneDetectionHorizontal;
 				} else {
 					configuration.planeDetection = ARPlaneDetectionHorizontal;
 				}
 			} else {
+				print_line("Plane detection is disabled");
 				configuration.planeDetection = 0;
 			}
 
@@ -843,9 +845,9 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 				if (planeAnchor.geometry.triangleCount > 0) {
 					Ref<SurfaceTool> surftool;
 #if VERSION_MAJOR == 4
-          surftool.instantiate();
+    				surftool.instantiate();
 #else
-          surftool.instance();
+        			surftool.instance();
 #endif
 					surftool->begin(Mesh::PRIMITIVE_TRIANGLES);
 
@@ -897,6 +899,8 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 			b.rows[1].z = m44.columns[2][1];
 			b.rows[2].z = m44.columns[2][2];
 #if VERSION_MAJOR == 4
+			Transform3D pose = Transform3D(b, Vector3(m44.columns[3][0], m44.columns[3][1], m44.columns[3][2]));
+			tracker->set_pose("default", pose, Vector3(), Vector3());
 #else
 			tracker->set_orientation(b);
 			tracker->set_rw_position(Vector3(m44.columns[3][0], m44.columns[3][1], m44.columns[3][2]));
