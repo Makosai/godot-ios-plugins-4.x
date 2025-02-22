@@ -31,6 +31,10 @@
 #ifndef ARKIT_ANCHOR_MESH_H
 #define ARKIT_ANCHOR_MESH_H
 
+#include "core/os/os.h"
+#include "core/version.h"
+#include "scene/resources/surface_tool.h"
+
 #include "servers/xr/xr_interface.h"
 #include "servers/xr/xr_positional_tracker.h"
 

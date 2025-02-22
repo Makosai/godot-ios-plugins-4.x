@@ -69,6 +69,7 @@
 
 #include <dlfcn.h>
 
+#include "arkit_anchor_mesh.h"
 #include "arkit_interface.h"
 #include "arkit_session_delegate.h"
 
@@ -481,7 +482,7 @@ GodotARTracker *ARKitInterface::get_anchor_for_uuid(const unsigned char *p_uuid)
 	}
 
 #if VERSION_MAJOR == 4
-	XRPositionalTracker *new_tracker = memnew(XRPositionalTracker);
+	ARKitAnchorMesh *new_tracker = memnew(ARKitAnchorMesh);
 	new_tracker->set_tracker_type(XRServer::TRACKER_ANCHOR);
 #else
 	ARVRPositionalTracker *new_tracker = memnew(ARVRPositionalTracker);
@@ -829,7 +830,7 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 		[anchor.identifier getUUIDBytes:uuid];
 
 #if VERSION_MAJOR == 4
-		XRPositionalTracker *tracker = get_anchor_for_uuid(uuid);
+		ARKitAnchorMesh *tracker = get_anchor_for_uuid(uuid);
 #else
 		ARVRPositionalTracker *tracker = get_anchor_for_uuid(uuid);
 #endif
@@ -866,23 +867,15 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 					}
 
 					surftool->generate_normals();
-#if VERSION_MAJOR == 4
-#else
+					
 					tracker->set_mesh(surftool->commit());
-#endif
 				} else {
 					Ref<Mesh> nomesh;
-#if VERSION_MAJOR == 4
-#else
 					tracker->set_mesh(nomesh);
-#endif
 				}
 			} else {
 				Ref<Mesh> nomesh;
-#if VERSION_MAJOR == 4
-#else
 				tracker->set_mesh(nomesh);
-#endif
 			}
 
 			// Note, this also contains a scale factor which gives us an idea of the size of the anchor

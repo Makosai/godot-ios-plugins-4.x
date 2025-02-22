@@ -36,9 +36,10 @@
 #if VERSION_MAJOR == 4
 #include "servers/xr/xr_interface.h"
 #include "servers/xr/xr_positional_tracker.h"
+#include "arkit_anchor_mesh.h"
 
 typedef XRInterface GodotBaseARInterface;
-typedef XRPositionalTracker GodotARTracker;
+typedef ARKitAnchorMesh GodotARTracker;
 
 typedef Vector<uint8_t> GodotUInt8Vector;
 
