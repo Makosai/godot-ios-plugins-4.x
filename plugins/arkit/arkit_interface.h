@@ -84,6 +84,7 @@ private:
 	real_t ambient_intensity;
 	real_t ambient_color_temperature;
 
+	Ref<XRPositionalTracker> m_head;
 	Transform3D transform;
 	Projection projection;
 	float eye_height, z_near, z_far;

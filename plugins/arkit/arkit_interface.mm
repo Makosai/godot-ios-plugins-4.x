@@ -313,6 +313,13 @@ bool ARKitInterface::initialize() {
 			// Start our session...
 			start_session();
 		}
+		
+		// The camera operates as a head and we need to create a tracker for that
+		m_head.instantiate();
+		m_head->set_tracker_type(XRServer::TRACKER_HEAD);
+		m_head->set_tracker_name("head");
+		m_head->set_tracker_desc("AR Device");
+		ar_server->add_tracker(m_head);
 
 		return true;
 	} else {
@@ -341,6 +348,11 @@ void ARKitInterface::uninitialize() {
 		}
 
 		remove_all_anchors();
+
+		if (m_head.is_valid()) {
+			ar_server->remove_tracker(m_head);
+			m_head.unref();
+		}
 
 		if (@available(iOS 11.0, *)) {
 			ar_session = nil;
@@ -794,6 +806,11 @@ void ARKitInterface::process() {
 					transform.origin.x = m44.columns[3][0];
 					transform.origin.y = m44.columns[3][1];
 					transform.origin.z = m44.columns[3][2];
+
+					if (m_head.is_valid()) {
+							// Set our head position, note in real space, reference frame and world scale is applied later
+							m_head->set_pose("default", transform, Vector3(), Vector3(), XRPose::XR_TRACKING_CONFIDENCE_HIGH);
+					}
 
 					// copy our current frame projection, investigate using projectionMatrixWithViewportSize:orientation:zNear:zFar: so we can set our own near and far
 					m44 = [camera projectionMatrixForOrientation:orientation viewportSize:CGSizeMake(screen_size.width, screen_size.height) zNear:z_near zFar:z_far];
