@@ -40,17 +40,17 @@
 
 class ARKitAnchorMesh : public XRPositionalTracker {
 	GDCLASS(ARKitAnchorMesh, XRPositionalTracker);
-    _THREAD_SAFE_CLASS_
+	_THREAD_SAFE_CLASS_
 
 private:
-    Ref<Mesh> mesh;
+	Ref<Mesh> mesh;
 
 protected:
 	static void _bind_methods();
 
 public:
-    void set_mesh(Ref<Mesh> mesh);
-    Ref<Mesh> get_mesh() const;
+	void set_mesh(Ref<Mesh> mesh);
+	Ref<Mesh> get_mesh() const;
 
 	ARKitAnchorMesh();
 	~ARKitAnchorMesh();

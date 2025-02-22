@@ -54,21 +54,21 @@
 #include "arkit_anchor_mesh.h"
 
 void ARKitAnchorMesh::set_mesh(Ref<Mesh> p_mesh) {
-    mesh = p_mesh;
+	mesh = p_mesh;
 }
 
 Ref<Mesh> ARKitAnchorMesh::get_mesh() const {
-    return mesh;
+	return mesh;
 }
 
 void ARKitAnchorMesh::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_mesh", "mesh"), &ARKitAnchorMesh::set_mesh);
 	ClassDB::bind_method(D_METHOD("get_mesh"), &ARKitAnchorMesh::get_mesh);
-    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "mesh", PROPERTY_HINT_RESOURCE_TYPE, "Mesh"), "set_mesh", "get_mesh");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "mesh", PROPERTY_HINT_RESOURCE_TYPE, "Mesh"), "set_mesh", "get_mesh");
 }
 
 ARKitAnchorMesh::ARKitAnchorMesh(){
-    mesh = NULL;
+	mesh = NULL;
 }
 
 ARKitAnchorMesh::~ARKitAnchorMesh(){
