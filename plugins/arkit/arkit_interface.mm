@@ -898,6 +898,8 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 			tracker->set_orientation(b);
 			tracker->set_rw_position(Vector3(m44.columns[3][0], m44.columns[3][1], m44.columns[3][2]));
 #endif
+
+			XRServer::get_singleton()->emit_signal(SNAME("tracker_updated"), tracker->get_tracker_name(), tracker->get_tracker_type());
 		}
 	}
 }
