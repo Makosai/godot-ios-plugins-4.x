@@ -83,6 +83,7 @@ private:
 	bool light_estimation_is_enabled;
 	real_t ambient_intensity;
 	real_t ambient_color_temperature;
+	real_t exposure_offset;
 
 	Ref<XRPositionalTracker> m_head;
 	Transform3D transform;
@@ -123,6 +124,7 @@ public:
 
 	real_t get_ambient_intensity() const;
 	real_t get_ambient_color_temperature() const;
+	real_t get_exposure_offset() const;
 
 	/* while Godot has its own raycast logic this takes ARKits camera into account and hits on any ARAnchor */
 	Array raycast(Vector2 p_screen_coord);

@@ -178,6 +178,10 @@ real_t ARKitInterface::get_ambient_color_temperature() const {
 	return ambient_color_temperature;
 }
 
+real_t ARKitInterface::get_exposure_offset() const {
+	return exposure_offset;
+}
+
 StringName ARKitInterface::get_name() const {
 	return "ARKit";
 }
@@ -241,6 +245,7 @@ void ARKitInterface::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_ambient_intensity"), &ARKitInterface::get_ambient_intensity);
 	ClassDB::bind_method(D_METHOD("get_ambient_color_temperature"), &ARKitInterface::get_ambient_color_temperature);
+	ClassDB::bind_method(D_METHOD("get_exposure_offset"), &ARKitInterface::get_exposure_offset);
 
 	ClassDB::bind_method(D_METHOD("raycast", "screen_coord"), &ARKitInterface::raycast);
 }
@@ -752,6 +757,13 @@ void ARKitInterface::process() {
 
 				// Process our camera
 				ARCamera *camera = current_frame.camera;
+
+				// Record camera exposure
+				if (@available(iOS 13, *)) {
+					exposure_offset = camera.exposureOffset;
+				} else {
+					exposure_offset = 0.0;
+				}
 
 				// strangely enough we have to states, rolling them up into one
 				if (camera.trackingState == ARTrackingStateNotAvailable) {
