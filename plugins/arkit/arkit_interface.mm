@@ -557,8 +557,6 @@ void ARKitInterface::remove_anchor_for_uuid(const unsigned char *p_uuid) {
 #else
 				ARVRServer::get_singleton()->remove_tracker(anchors[i].tracker);
 #endif
-				memdelete(anchors[i].tracker);
-
 				// bring remaining forward
 				for (unsigned int j = i + 1; j < num_anchors; j++) {
 					anchors[j - 1] = anchors[j];
@@ -581,7 +579,6 @@ void ARKitInterface::remove_all_anchors() {
 #else
 			ARVRServer::get_singleton()->remove_tracker(anchors[i].tracker);
 #endif
-			memdelete(anchors[i].tracker);
 		};
 
 		free(anchors);
