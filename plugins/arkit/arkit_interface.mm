@@ -206,6 +206,23 @@ Array ARKitInterface::raycast(Vector2 p_screen_coord) {
 		point.x = p_screen_coord.x / screen_size.x;
 		point.y = p_screen_coord.y / screen_size.y;
 
+		UIInterfaceOrientation orientation = UIInterfaceOrientationUnknown;
+
+		if (@available(iOS 13, *)) {
+			orientation = [UIApplication sharedApplication].delegate.window.windowScene.interfaceOrientation;
+		} else {
+			orientation = [[UIApplication sharedApplication] statusBarOrientation];
+		}
+
+		// This transform takes a point from image space to screen space
+		CGAffineTransform affine_transform = [ar_session.currentFrame displayTransformForOrientation:orientation viewportSize:CGSizeMake(screen_size.width, screen_size.height)];
+		
+		// Invert the transformation, as hitTest expects the point to be in image space
+		affine_transform = CGAffineTransformInvert(affine_transform);
+
+		// Transform the point to image space
+		point = CGPointApplyAffineTransform(point, affine_transform);
+
 		///@TODO maybe give more options here, for now we're taking just ARAchors into account that were found during plane detection keeping their size into account
 		NSArray<ARHitTestResult *> *results = [ar_session.currentFrame hitTest:point types:ARHitTestResultTypeExistingPlaneUsingExtent];
 
@@ -584,7 +601,7 @@ void ARKitInterface::process() {
 				// only process if we have a new frame
 				last_timestamp = current_frame.timestamp;
 
-// get some info about our screen and orientation
+				// get some info about our screen and orientation
 #if VERSION_MAJOR == 4
 				Size2 screen_size = DisplayServer::get_singleton()->screen_get_size();
 #else
@@ -732,6 +749,7 @@ void ARKitInterface::process() {
 #endif
 
 						// now build our transform to display this as a background image that matches our camera
+						// this transform takes a point from image space to screen space
 						CGAffineTransform affine_transform = [current_frame displayTransformForOrientation:orientation viewportSize:CGSizeMake(screen_size.width, screen_size.height)];
 						
 						Transform2D display_transform = Transform2D(
