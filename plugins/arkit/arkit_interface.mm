@@ -770,7 +770,7 @@ void ARKitInterface::process() {
 
 					///@TODO it's there, but not there.. what to do with this...
 					// https://developer.apple.com/documentation/arkit/arlightestimate?language=objc
-					//				ambient_color_temperature = current_frame.lightEstimate.ambientColorTemperature;
+					ambient_color_temperature = current_frame.lightEstimate.ambientColorTemperature;
 				}
 
 				// Process our camera
@@ -779,8 +779,6 @@ void ARKitInterface::process() {
 				// Record camera exposure
 				if (@available(iOS 13, *)) {
 					exposure_offset = camera.exposureOffset;
-				} else {
-					exposure_offset = 0.0;
 				}
 
 				// strangely enough we have to states, rolling them up into one
@@ -979,6 +977,7 @@ ARKitInterface::ARKitInterface() {
 	num_anchors = 0;
 	ambient_intensity = 1.0;
 	ambient_color_temperature = 1.0;
+	exposure_offset = 0.0;
 	image_width[0] = 0;
 	image_width[1] = 0;
 	image_height[0] = 0;
