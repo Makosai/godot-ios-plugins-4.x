@@ -33,7 +33,7 @@
 
 #include "core/version.h"
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 #include "servers/xr/xr_interface.h"
 #include "servers/xr/xr_positional_tracker.h"
 
@@ -92,7 +92,7 @@ private:
 	size_t image_height[2];
 	GodotUInt8Vector img_data[2];
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
   XRInterface::TrackingStatus tracking_state;
 #endif
 

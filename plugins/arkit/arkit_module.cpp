@@ -38,7 +38,7 @@ void register_arkit_types() {
 
 	Ref<ARKitInterface> arkit_interface;
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 	arkit_interface.instantiate();
 	XRServer::get_singleton()->add_interface(arkit_interface);
 #else

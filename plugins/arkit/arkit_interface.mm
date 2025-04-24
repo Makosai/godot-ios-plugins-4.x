@@ -32,7 +32,7 @@
 #include "core/version.h"
 #include "scene/resources/surface_tool.h"
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 #include "core/input/input.h"
 #include "servers/rendering/rendering_server_globals.h"
 
@@ -180,7 +180,7 @@ StringName ARKitInterface::get_name() const {
 }
 
 uint32_t ARKitInterface::get_capabilities() const {
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 	return ARKitInterface::XR_MONO + ARKitInterface::XR_AR;
 #else
 	return ARKitInterface::ARVR_MONO + ARKitInterface::ARVR_AR;
@@ -190,7 +190,7 @@ uint32_t ARKitInterface::get_capabilities() const {
 Array ARKitInterface::raycast(Vector2 p_screen_coord) {
 	if (@available(iOS 11, *)) {
 		Array arr;
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 		Size2 screen_size = DisplayServer::get_singleton()->screen_get_size();
 #else
 		Size2 screen_size = OS::get_singleton()->get_window_size();
@@ -242,7 +242,7 @@ void ARKitInterface::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("raycast", "screen_coord"), &ARKitInterface::raycast);
 }
 
-#if VERSION_MAJOR != 4
+#if VERSION_MAJOR < 4
 bool ARKitInterface::is_stereo() {
 	// this is a mono device...
 	return false;
@@ -254,7 +254,7 @@ bool ARKitInterface::is_initialized() const {
 }
 
 bool ARKitInterface::initialize() {
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 	XRServer *ar_server = XRServer::get_singleton();
 #else
 	ARVRServer *ar_server = ARVRServer::get_singleton();
@@ -290,7 +290,7 @@ bool ARKitInterface::initialize() {
 
 			// make sure we have our feed setup
 			if (feed.is_null()) {
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
         feed.instantiate();
 #else
         feed.instance();
@@ -319,7 +319,7 @@ bool ARKitInterface::initialize() {
 
 void ARKitInterface::uninitialize() {
 	if (initialized) {
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 		XRServer *ar_server = XRServer::get_singleton();
 #else
 		ARVRServer *ar_server = ARVRServer::get_singleton();
@@ -352,7 +352,7 @@ void ARKitInterface::uninitialize() {
 Size2 ARKitInterface::get_render_target_size() {
 	GODOT_MAKE_THREAD_SAFE
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 	Size2 target_size = DisplayServer::get_singleton()->screen_get_size();
 #else
 	Size2 target_size = OS::get_singleton()->get_window_size();
@@ -366,7 +366,7 @@ Transform3D ARKitInterface::get_transform_for_view(uint32_t p_view, const Transf
 
 	Transform3D transform_for_view;
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 	XRServer *ar_server = XRServer::get_singleton();
 #else
 	ARVRServer *ar_server = ARVRServer::get_singleton();
@@ -419,7 +419,7 @@ GodotARTracker *ARKitInterface::get_anchor_for_uuid(const unsigned char *p_uuid)
 		ERR_FAIL_NULL_V(anchors, NULL);
 	}
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 	XRPositionalTracker *new_tracker = memnew(XRPositionalTracker);
 	new_tracker->set_tracker_type(XRServer::TRACKER_ANCHOR);
 #else
@@ -432,14 +432,14 @@ GodotARTracker *ARKitInterface::get_anchor_for_uuid(const unsigned char *p_uuid)
 
 	String name = tracker_name;
 	print_line("Adding tracker " + name);
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 	new_tracker->set_tracker_name(name);
 #else
 	new_tracker->set_name(name);
 #endif
 
 // add our tracker
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 	XRServer::get_singleton()->add_tracker(new_tracker);
 #else
 	ARVRServer::get_singleton()->add_tracker(new_tracker);
@@ -456,7 +456,7 @@ void ARKitInterface::remove_anchor_for_uuid(const unsigned char *p_uuid) {
 		for (unsigned int i = 0; i < num_anchors; i++) {
 			if (memcmp(anchors[i].uuid, p_uuid, 16) == 0) {
 // remove our tracker
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 				XRServer::get_singleton()->remove_tracker(anchors[i].tracker);
 #else
 				ARVRServer::get_singleton()->remove_tracker(anchors[i].tracker);
@@ -480,7 +480,7 @@ void ARKitInterface::remove_all_anchors() {
 	if (anchors != NULL) {
 		for (unsigned int i = 0; i < num_anchors; i++) {
 // remove our tracker
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 			XRServer::get_singleton()->remove_tracker(anchors[i].tracker);
 #else
 			ARVRServer::get_singleton()->remove_tracker(anchors[i].tracker);
@@ -506,7 +506,7 @@ void ARKitInterface::process() {
 				last_timestamp = current_frame.timestamp;
 
 // get some info about our screen and orientation
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 				Size2 screen_size = DisplayServer::get_singleton()->screen_get_size();
 #else
 				Size2 screen_size = OS::get_singleton()->get_window_size();
@@ -561,14 +561,14 @@ void ARKitInterface::process() {
 								img_data[0].resize(new_width * new_height);
 							}
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 							uint8_t *w = img_data[0].ptrw();
 #else
 							PoolVector<uint8_t>::Write w = img_data[0].write();
 #endif
 
 							if (new_width == bytes_per_row) {
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 								memcpy(w, dataY, new_width * new_height);
 #else
 								memcpy(w.ptr(), dataY, new_width * new_height);
@@ -577,7 +577,7 @@ void ARKitInterface::process() {
 								size_t offset_a = 0;
 								size_t offset_b = extraLeft + (extraTop * bytes_per_row);
 								for (size_t r = 0; r < new_height; r++) {
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 									memcpy(w + offset_a, dataY + offset_b, new_width);
 #else
 									memcpy(w.ptr() + offset_a, dataY + offset_b, new_width);
@@ -587,7 +587,7 @@ void ARKitInterface::process() {
 								}
 							}
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
               img[0].instantiate();
               img[0]->initialize_data(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
 #else
@@ -610,14 +610,14 @@ void ARKitInterface::process() {
 								img_data[1].resize(2 * new_width * new_height);
 							}
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 							uint8_t *w = img_data[1].ptrw();
 #else
 							PoolVector<uint8_t>::Write w = img_data[1].write();
 #endif
 
 							if ((2 * new_width) == bytes_per_row) {
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 								memcpy(w, dataCbCr, 2 * new_width * new_height);
 #else
 								memcpy(w.ptr(), dataCbCr, 2 * new_width * new_height);
@@ -626,7 +626,7 @@ void ARKitInterface::process() {
 								size_t offset_a = 0;
 								size_t offset_b = extraLeft + (extraTop * bytes_per_row);
 								for (size_t r = 0; r < new_height; r++) {
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 									memcpy(w + offset_a, dataCbCr + offset_b, 2 * new_width);
 #else
 									memcpy(w.ptr() + offset_a, dataCbCr + offset_b, 2 * new_width);
@@ -636,7 +636,7 @@ void ARKitInterface::process() {
 								}
 							}
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
               img[1].instantiate();
               img[1]->initialize_data(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
 #else
@@ -775,7 +775,7 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 		unsigned char uuid[16];
 		[anchor.identifier getUUIDBytes:uuid];
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 		XRPositionalTracker *tracker = get_anchor_for_uuid(uuid);
 #else
 		ARVRPositionalTracker *tracker = get_anchor_for_uuid(uuid);
@@ -791,7 +791,7 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 			if (@available(iOS 11.3, *)) {
 				if (planeAnchor.geometry.triangleCount > 0) {
 					Ref<SurfaceTool> surftool;
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
           surftool.instantiate();
 #else
           surftool.instance();
@@ -802,7 +802,7 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 						int16_t index = planeAnchor.geometry.triangleIndices[j];
 						simd_float3 vrtx = planeAnchor.geometry.vertices[index];
 						simd_float2 textcoord = planeAnchor.geometry.textureCoordinates[index];
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 						surftool->set_uv(Vector2(textcoord[0], textcoord[1]));
 						surftool->set_color(Color(0.8, 0.8, 0.8));
 #else
@@ -813,20 +813,20 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 					}
 
 					surftool->generate_normals();
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 #else
 					tracker->set_mesh(surftool->commit());
 #endif
 				} else {
 					Ref<Mesh> nomesh;
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 #else
 					tracker->set_mesh(nomesh);
 #endif
 				}
 			} else {
 				Ref<Mesh> nomesh;
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 #else
 				tracker->set_mesh(nomesh);
 #endif
@@ -845,7 +845,7 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 			b.rows[0].z = m44.columns[2][0];
 			b.rows[1].z = m44.columns[2][1];
 			b.rows[2].z = m44.columns[2][2];
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 #else
 			tracker->set_orientation(b);
 			tracker->set_rw_position(Vector3(m44.columns[3][0], m44.columns[3][1], m44.columns[3][2]));
