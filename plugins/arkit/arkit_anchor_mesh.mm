@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  arkit_module.cpp                                                     */
+/*  arkit_interface.h                                                    */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,29 +28,49 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "arkit_module.h"
-
-#include "arkit_interface.h"
+#include "core/os/os.h"
 #include "core/version.h"
+#include "scene/resources/surface_tool.h"
 
-#include "core/object/class_db.h"
+#include "core/input/input.h"
+#include "servers/rendering/rendering_server_globals.h"
 
-void register_arkit_types() {
-	// does it make sense to register the class?
+#define GODOT_FOCUS_IN_NOTIFICATION DisplayServer::WINDOW_EVENT_FOCUS_IN
+#define GODOT_FOCUS_OUT_NOTIFICATION DisplayServer::WINDOW_EVENT_FOCUS_OUT
 
-	Ref<ARKitInterface> arkit_interface;
+#define GODOT_MAKE_THREAD_SAFE ;
 
-#if VERSION_MAJOR >= 4
-	arkit_interface.instantiate();
-	XRServer::get_singleton()->add_interface(arkit_interface);
-	//GDREGISTER_CLASS(ARKitAnchorMesh);
-	ClassDB::register_class<ARKitAnchorMesh>();
-#else
-	arkit_interface.instance();
-	ARVRServer::get_singleton()->add_interface(arkit_interface);
-#endif
+#define GODOT_AR_STATE_NOT_TRACKING XRInterface::XR_NOT_TRACKING
+#define GODOT_AR_STATE_NORMAL_TRACKING XRInterface::XR_NORMAL_TRACKING
+#define GODOT_AR_STATE_EXCESSIVE_MOTION XRInterface::XR_EXCESSIVE_MOTION
+#define GODOT_AR_STATE_INSUFFICIENT_FEATURES XRInterface::XR_INSUFFICIENT_FEATURES
+#define GODOT_AR_STATE_UNKNOWN_TRACKING XRInterface::XR_UNKNOWN_TRACKING
+
+#import <ARKit/ARKit.h>
+#import <UIKit/UIKit.h>
+
+#include <dlfcn.h>
+
+#include "arkit_anchor_mesh.h"
+
+void ARKitAnchorMesh::set_mesh(Ref<Mesh> p_mesh) {
+	mesh = p_mesh;
 }
 
-void unregister_arkit_types() {
-	// should clean itself up nicely :)
+Ref<Mesh> ARKitAnchorMesh::get_mesh() const {
+	return mesh;
+}
+
+void ARKitAnchorMesh::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_mesh", "mesh"), &ARKitAnchorMesh::set_mesh);
+	ClassDB::bind_method(D_METHOD("get_mesh"), &ARKitAnchorMesh::get_mesh);
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "mesh", PROPERTY_HINT_RESOURCE_TYPE, "Mesh"), "set_mesh", "get_mesh");
+}
+
+ARKitAnchorMesh::ARKitAnchorMesh(){
+	mesh = NULL;
+}
+
+ARKitAnchorMesh::~ARKitAnchorMesh(){
+
 }

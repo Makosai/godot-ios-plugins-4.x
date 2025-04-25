@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  arkit_module.cpp                                                     */
+/*  arkit_interface.h                                                    */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,29 +28,32 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "arkit_module.h"
+#ifndef ARKIT_ANCHOR_MESH_H
+#define ARKIT_ANCHOR_MESH_H
 
-#include "arkit_interface.h"
+#include "core/os/os.h"
 #include "core/version.h"
+#include "scene/resources/surface_tool.h"
 
-#include "core/object/class_db.h"
+#include "servers/xr/xr_interface.h"
+#include "servers/xr/xr_positional_tracker.h"
 
-void register_arkit_types() {
-	// does it make sense to register the class?
+class ARKitAnchorMesh : public XRPositionalTracker {
+	GDCLASS(ARKitAnchorMesh, XRPositionalTracker);
+	_THREAD_SAFE_CLASS_
 
-	Ref<ARKitInterface> arkit_interface;
+private:
+	Ref<Mesh> mesh;
 
-#if VERSION_MAJOR >= 4
-	arkit_interface.instantiate();
-	XRServer::get_singleton()->add_interface(arkit_interface);
-	//GDREGISTER_CLASS(ARKitAnchorMesh);
-	ClassDB::register_class<ARKitAnchorMesh>();
-#else
-	arkit_interface.instance();
-	ARVRServer::get_singleton()->add_interface(arkit_interface);
-#endif
-}
+protected:
+	static void _bind_methods();
 
-void unregister_arkit_types() {
-	// should clean itself up nicely :)
-}
+public:
+	void set_mesh(Ref<Mesh> mesh);
+	Ref<Mesh> get_mesh() const;
+
+	ARKitAnchorMesh();
+	~ARKitAnchorMesh();
+};
+
+#endif /* !ARKIT_ANCHOR_MESH_H */

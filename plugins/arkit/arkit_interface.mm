@@ -69,6 +69,7 @@
 
 #include <dlfcn.h>
 
+#include "arkit_anchor_mesh.h"
 #include "arkit_interface.h"
 #include "arkit_session_delegate.h"
 
@@ -94,12 +95,14 @@ void ARKitInterface::start_session() {
 
 			configuration.lightEstimationEnabled = light_estimation_is_enabled;
 			if (plane_detection_is_enabled) {
+				print_line("Starting plane detection");
 				if (@available(iOS 11.3, *)) {
 					configuration.planeDetection = ARPlaneDetectionVertical | ARPlaneDetectionHorizontal;
 				} else {
 					configuration.planeDetection = ARPlaneDetectionHorizontal;
 				}
 			} else {
+				print_line("Plane detection is disabled");
 				configuration.planeDetection = 0;
 			}
 
@@ -175,6 +178,10 @@ real_t ARKitInterface::get_ambient_color_temperature() const {
 	return ambient_color_temperature;
 }
 
+real_t ARKitInterface::get_exposure_offset() const {
+	return exposure_offset;
+}
+
 StringName ARKitInterface::get_name() const {
 	return "ARKit";
 }
@@ -198,6 +205,23 @@ Array ARKitInterface::raycast(Vector2 p_screen_coord) {
 		CGPoint point;
 		point.x = p_screen_coord.x / screen_size.x;
 		point.y = p_screen_coord.y / screen_size.y;
+
+		UIInterfaceOrientation orientation = UIInterfaceOrientationUnknown;
+
+		if (@available(iOS 13, *)) {
+			orientation = [UIApplication sharedApplication].delegate.window.windowScene.interfaceOrientation;
+		} else {
+			orientation = [[UIApplication sharedApplication] statusBarOrientation];
+		}
+
+		// This transform takes a point from image space to screen space
+		CGAffineTransform affine_transform = [ar_session.currentFrame displayTransformForOrientation:orientation viewportSize:CGSizeMake(screen_size.width, screen_size.height)];
+		
+		// Invert the transformation, as hitTest expects the point to be in image space
+		affine_transform = CGAffineTransformInvert(affine_transform);
+
+		// Transform the point to image space
+		point = CGPointApplyAffineTransform(point, affine_transform);
 
 		///@TODO maybe give more options here, for now we're taking just ARAchors into account that were found during plane detection keeping their size into account
 		NSArray<ARHitTestResult *> *results = [ar_session.currentFrame hitTest:point types:ARHitTestResultTypeExistingPlaneUsingExtent];
@@ -238,6 +262,7 @@ void ARKitInterface::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_ambient_intensity"), &ARKitInterface::get_ambient_intensity);
 	ClassDB::bind_method(D_METHOD("get_ambient_color_temperature"), &ARKitInterface::get_ambient_color_temperature);
+	ClassDB::bind_method(D_METHOD("get_exposure_offset"), &ARKitInterface::get_exposure_offset);
 
 	ClassDB::bind_method(D_METHOD("raycast", "screen_coord"), &ARKitInterface::raycast);
 }
@@ -310,6 +335,13 @@ bool ARKitInterface::initialize() {
 			// Start our session...
 			start_session();
 		}
+		
+		// The camera operates as a head and we need to create a tracker for that
+		m_head.instantiate();
+		m_head->set_tracker_type(XRServer::TRACKER_HEAD);
+		m_head->set_tracker_name("head");
+		m_head->set_tracker_desc("AR Device");
+		ar_server->add_tracker(m_head);
 
 		return true;
 	} else {
@@ -339,6 +371,11 @@ void ARKitInterface::uninitialize() {
 
 		remove_all_anchors();
 
+		if (m_head.is_valid()) {
+			ar_server->remove_tracker(m_head);
+			m_head.unref();
+		}
+
 		if (@available(iOS 11.0, *)) {
 			ar_session = nil;
 		}
@@ -347,6 +384,11 @@ void ARKitInterface::uninitialize() {
 		initialized = false;
 		session_was_started = false;
 	}
+}
+
+Dictionary ARKitInterface::get_system_info() {
+	Dictionary dict;
+	return dict;
 }
 
 Size2 ARKitInterface::get_render_target_size() {
@@ -359,6 +401,14 @@ Size2 ARKitInterface::get_render_target_size() {
 #endif
 
 	return target_size;
+}
+
+uint32_t ARKitInterface::get_view_count() {
+	return 1;
+}
+
+Transform3D ARKitInterface::get_camera_transform() {
+	return transform;
 }
 
 Transform3D ARKitInterface::get_transform_for_view(uint32_t p_view, const Transform3D &p_cam_transform) {
@@ -398,6 +448,51 @@ Projection ARKitInterface::get_projection_for_view(uint32_t p_view, double p_asp
 	return projection;
 }
 
+Vector<BlitToScreen> ARKitInterface::post_draw_viewport(RID p_render_target, const Rect2 &p_screen_rect) {
+	GODOT_MAKE_THREAD_SAFE
+
+	Vector<BlitToScreen> blit_to_screen;
+
+	// We must have a valid render target
+	ERR_FAIL_COND_V(!p_render_target.is_valid(), blit_to_screen);
+
+	// Because we are rendering to our device we must use our main viewport!
+	ERR_FAIL_COND_V(p_screen_rect == Rect2(), blit_to_screen);
+
+	Rect2 src_rect(0.0f, 0.0f, 1.0f, 1.0f);
+	Rect2 dst_rect = p_screen_rect;
+	//Vector2 eye_center(((-intraocular_dist / 2.0) + (display_width / 4.0)) / (display_width / 2.0), 0.0);
+
+	//add_blit(p_render_target, src_rect, dst_rect);
+	
+	if (p_screen_rect != Rect2()) {
+		BlitToScreen blit;
+
+		blit.render_target = p_render_target;
+		blit.multi_view.use_layer = true;
+		blit.multi_view.layer = 0;
+		blit.lens_distortion.apply = false;
+
+		Size2 render_size = get_render_target_size();
+		Rect2 dst_rect = p_screen_rect;
+		float new_height = dst_rect.size.x * (render_size.y / render_size.x);
+		if (new_height > dst_rect.size.y) {
+			dst_rect.position.y = (0.5 * dst_rect.size.y) - (0.5 * new_height);
+			dst_rect.size.y = new_height;
+		} else {
+			float new_width = dst_rect.size.y * (render_size.x / render_size.y);
+
+			dst_rect.position.x = (0.5 * dst_rect.size.x) - (0.5 * new_width);
+			dst_rect.size.x = new_width;
+		}
+
+		blit.dst_rect = dst_rect;
+		blit_to_screen.push_back(blit);
+	}
+	
+	return blit_to_screen;
+}
+
 GodotARTracker *ARKitInterface::get_anchor_for_uuid(const unsigned char *p_uuid) {
 	if (anchors == NULL) {
 		num_anchors = 0;
@@ -420,7 +515,7 @@ GodotARTracker *ARKitInterface::get_anchor_for_uuid(const unsigned char *p_uuid)
 	}
 
 #if VERSION_MAJOR >= 4
-	XRPositionalTracker *new_tracker = memnew(XRPositionalTracker);
+	ARKitAnchorMesh *new_tracker = memnew(ARKitAnchorMesh);
 	new_tracker->set_tracker_type(XRServer::TRACKER_ANCHOR);
 #else
 	ARVRPositionalTracker *new_tracker = memnew(ARVRPositionalTracker);
@@ -461,8 +556,6 @@ void ARKitInterface::remove_anchor_for_uuid(const unsigned char *p_uuid) {
 #else
 				ARVRServer::get_singleton()->remove_tracker(anchors[i].tracker);
 #endif
-				memdelete(anchors[i].tracker);
-
 				// bring remaining forward
 				for (unsigned int j = i + 1; j < num_anchors; j++) {
 					anchors[j - 1] = anchors[j];
@@ -485,7 +578,6 @@ void ARKitInterface::remove_all_anchors() {
 #else
 			ARVRServer::get_singleton()->remove_tracker(anchors[i].tracker);
 #endif
-			memdelete(anchors[i].tracker);
 		};
 
 		free(anchors);
@@ -505,7 +597,7 @@ void ARKitInterface::process() {
 				// only process if we have a new frame
 				last_timestamp = current_frame.timestamp;
 
-// get some info about our screen and orientation
+				// get some info about our screen and orientation
 #if VERSION_MAJOR >= 4
 				Size2 screen_size = DisplayServer::get_singleton()->screen_get_size();
 #else
@@ -588,11 +680,11 @@ void ARKitInterface::process() {
 							}
 
 #if VERSION_MAJOR >= 4
-              img[0].instantiate();
-              img[0]->initialize_data(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
+							img[0].instantiate();
+							img[0]->initialize_data(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
 #else
-              img[0].instance();
-              img[0]->create(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
+							img[0].instance();
+							img[0]->create(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
 #endif
 						}
 
@@ -637,33 +729,25 @@ void ARKitInterface::process() {
 							}
 
 #if VERSION_MAJOR >= 4
-              img[1].instantiate();
-              img[1]->initialize_data(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
+							img[1].instantiate();
+							img[1]->initialize_data(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
 #else
-              img[1].instance();
-              img[1]->create(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
+							img[1].instance();
+							img[1]->create(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
 #endif
 						}
 
 						// set our texture...
+#if (VERSION_MAJOR == 4 && VERSION_MINOR >= 4) || VERSION_MAJOR > 4
+						feed->set_ycbcr_images(img[0], img[1]);
+#else
 						feed->set_YCbCr_imgs(img[0], img[1]);
+#endif
 
 						// now build our transform to display this as a background image that matches our camera
+						// this transform takes a point from image space to screen space
 						CGAffineTransform affine_transform = [current_frame displayTransformForOrientation:orientation viewportSize:CGSizeMake(screen_size.width, screen_size.height)];
-
-						// we need to invert this, probably row v.s. column notation
-						affine_transform = CGAffineTransformInvert(affine_transform);
-
-						if (orientation != UIInterfaceOrientationPortrait) {
-							affine_transform.b = -affine_transform.b;
-							affine_transform.d = -affine_transform.d;
-							affine_transform.ty = 1.0 - affine_transform.ty;
-						} else {
-							affine_transform.c = -affine_transform.c;
-							affine_transform.a = -affine_transform.a;
-							affine_transform.tx = 1.0 - affine_transform.tx;
-						}
-
+						
 						Transform2D display_transform = Transform2D(
 								affine_transform.a, affine_transform.b,
 								affine_transform.c, affine_transform.d,
@@ -682,11 +766,16 @@ void ARKitInterface::process() {
 
 					///@TODO it's there, but not there.. what to do with this...
 					// https://developer.apple.com/documentation/arkit/arlightestimate?language=objc
-					//				ambient_color_temperature = current_frame.lightEstimate.ambientColorTemperature;
+					ambient_color_temperature = current_frame.lightEstimate.ambientColorTemperature;
 				}
 
 				// Process our camera
 				ARCamera *camera = current_frame.camera;
+
+				// Record camera exposure
+				if (@available(iOS 13, *)) {
+					exposure_offset = camera.exposureOffset;
+				}
 
 				// strangely enough we have to states, rolling them up into one
 				if (camera.trackingState == ARTrackingStateNotAvailable) {
@@ -706,12 +795,12 @@ void ARKitInterface::process() {
 					// copy our current frame transform
 					matrix_float4x4 m44 = camera.transform;
 					if (orientation == UIInterfaceOrientationLandscapeLeft) {
-						transform.basis.rows[0].x = m44.columns[0][0];
-						transform.basis.rows[1].x = m44.columns[0][1];
-						transform.basis.rows[2].x = m44.columns[0][2];
-						transform.basis.rows[0].y = m44.columns[1][0];
-						transform.basis.rows[1].y = m44.columns[1][1];
-						transform.basis.rows[2].y = m44.columns[1][2];
+						transform.basis.rows[0].x = -m44.columns[0][0];
+						transform.basis.rows[1].x = -m44.columns[0][1];
+						transform.basis.rows[2].x = -m44.columns[0][2];
+						transform.basis.rows[0].y = -m44.columns[1][0];
+						transform.basis.rows[1].y = -m44.columns[1][1];
+						transform.basis.rows[2].y = -m44.columns[1][2];
 					} else if (orientation == UIInterfaceOrientationPortrait) {
 						transform.basis.rows[0].x = m44.columns[1][0];
 						transform.basis.rows[1].x = m44.columns[1][1];
@@ -720,21 +809,21 @@ void ARKitInterface::process() {
 						transform.basis.rows[1].y = -m44.columns[0][1];
 						transform.basis.rows[2].y = -m44.columns[0][2];
 					} else if (orientation == UIInterfaceOrientationLandscapeRight) {
-						transform.basis.rows[0].x = -m44.columns[0][0];
-						transform.basis.rows[1].x = -m44.columns[0][1];
-						transform.basis.rows[2].x = -m44.columns[0][2];
-						transform.basis.rows[0].y = -m44.columns[1][0];
-						transform.basis.rows[1].y = -m44.columns[1][1];
-						transform.basis.rows[2].y = -m44.columns[1][2];
+						transform.basis.rows[0].x = m44.columns[0][0];
+						transform.basis.rows[1].x = m44.columns[0][1];
+						transform.basis.rows[2].x = m44.columns[0][2];
+						transform.basis.rows[0].y = m44.columns[1][0];
+						transform.basis.rows[1].y = m44.columns[1][1];
+						transform.basis.rows[2].y = m44.columns[1][2];
 					} else if (orientation == UIInterfaceOrientationPortraitUpsideDown) {
-						// this may not be correct
-						transform.basis.rows[0].x = m44.columns[1][0];
-						transform.basis.rows[1].x = m44.columns[1][1];
-						transform.basis.rows[2].x = m44.columns[1][2];
+						transform.basis.rows[0].x = -m44.columns[1][0];
+						transform.basis.rows[1].x = -m44.columns[1][1];
+						transform.basis.rows[2].x = -m44.columns[1][2];
 						transform.basis.rows[0].y = m44.columns[0][0];
 						transform.basis.rows[1].y = m44.columns[0][1];
 						transform.basis.rows[2].y = m44.columns[0][2];
 					}
+
 					transform.basis.rows[0].z = m44.columns[2][0];
 					transform.basis.rows[1].z = m44.columns[2][1];
 					transform.basis.rows[2].z = m44.columns[2][2];
@@ -742,8 +831,14 @@ void ARKitInterface::process() {
 					transform.origin.y = m44.columns[3][1];
 					transform.origin.z = m44.columns[3][2];
 
+					if (m_head.is_valid()) {
+							// Set our head position, note in real space, reference frame and world scale is applied later
+							m_head->set_pose("default", transform, Vector3(), Vector3(), XRPose::XR_TRACKING_CONFIDENCE_HIGH);
+					}
+
 					// copy our current frame projection, investigate using projectionMatrixWithViewportSize:orientation:zNear:zFar: so we can set our own near and far
 					m44 = [camera projectionMatrixForOrientation:orientation viewportSize:CGSizeMake(screen_size.width, screen_size.height) zNear:z_near zFar:z_far];
+
 					projection.columns[0][0] = m44.columns[0][0];
 					projection.columns[1][0] = m44.columns[1][0];
 					projection.columns[2][0] = m44.columns[2][0];
@@ -776,7 +871,7 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 		[anchor.identifier getUUIDBytes:uuid];
 
 #if VERSION_MAJOR >= 4
-		XRPositionalTracker *tracker = get_anchor_for_uuid(uuid);
+		ARKitAnchorMesh *tracker = get_anchor_for_uuid(uuid);
 #else
 		ARVRPositionalTracker *tracker = get_anchor_for_uuid(uuid);
 #endif
@@ -792,9 +887,9 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 				if (planeAnchor.geometry.triangleCount > 0) {
 					Ref<SurfaceTool> surftool;
 #if VERSION_MAJOR >= 4
-          surftool.instantiate();
+					surftool.instantiate();
 #else
-          surftool.instance();
+					surftool.instance();
 #endif
 					surftool->begin(Mesh::PRIMITIVE_TRIANGLES);
 
@@ -846,10 +941,14 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 			b.rows[1].z = m44.columns[2][1];
 			b.rows[2].z = m44.columns[2][2];
 #if VERSION_MAJOR >= 4
+			Transform3D pose = Transform3D(b, Vector3(m44.columns[3][0], m44.columns[3][1], m44.columns[3][2]));
+			tracker->set_pose("default", pose, Vector3(), Vector3());
 #else
 			tracker->set_orientation(b);
 			tracker->set_rw_position(Vector3(m44.columns[3][0], m44.columns[3][1], m44.columns[3][2]));
 #endif
+
+			XRServer::get_singleton()->emit_signal(SNAME("tracker_updated"), tracker->get_tracker_name(), tracker->get_tracker_type());
 		}
 	}
 }
@@ -882,6 +981,7 @@ ARKitInterface::ARKitInterface() {
 	num_anchors = 0;
 	ambient_intensity = 1.0;
 	ambient_color_temperature = 1.0;
+	exposure_offset = 0.0;
 	image_width[0] = 0;
 	image_width[1] = 0;
 	image_height[0] = 0;
